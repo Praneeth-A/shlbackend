@@ -74,43 +74,43 @@ Assessments:
 Query: {query}
 
 Return a list of the top assessments' names only in order.
-Return only the top relevant assessment names.
-Return names only, one per line. No bullets or numbering.
+Return names only, one per line. No bullets or numbering as I'm parsing this response.
 """
+    try:
+        response = model.generate_content(prompt,
+        generation_config={
+            "temperature": 0.7,
+            "top_p": 1,
+            "top_k": 1,
+            "max_output_tokens": 1024
+        },
+        safety_settings=[
+            {"category": "HARM_CATEGORY_DEROGATORY", "threshold": 3},
+            {"category": "HARM_CATEGORY_VIOLENCE", "threshold": 3},
+            {"category": "HARM_CATEGORY_SEXUAL", "threshold": 3},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": 3},
+        ])
+        assessment_names = response.text.strip().splitlines()
 
-    response = model.generate_content(prompt,
-    generation_config={
-        "temperature": 0.7,
-        "top_p": 1,
-        "top_k": 1,
-        "max_output_tokens": 1024
-    },
-    safety_settings=[
-        {"category": "HARM_CATEGORY_DEROGATORY", "threshold": 3},
-        {"category": "HARM_CATEGORY_VIOLENCE", "threshold": 3},
-        {"category": "HARM_CATEGORY_SEXUAL", "threshold": 3},
-        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": 3},
-    ])
-    assessment_names = response.text.strip().splitlines()
+        # Clean and lookup final results
+        name_to_doc = {doc.metadata['name']: doc for doc in filtered_docs if 'name' in doc.metadata}
+        final_docs = [name_to_doc[name.strip()] for name in assessment_names if name.strip() in name_to_doc]
 
-    # Clean and lookup final results
-    name_to_doc = {doc.metadata['name']: doc for doc in filtered_docs if 'name' in doc.metadata}
-    final_docs = [name_to_doc[name.strip()] for name in assessment_names if name.strip() in name_to_doc]
+        results = []
+        for doc in final_docs:
+            meta = doc.metadata
+            results.append({
+                "name": meta.get("name", ""),
+                "url": meta.get("url", ""),
+                "remote_testing": meta.get("remote_testing", ""),
+                "adaptive_irt": meta.get("adaptive_irt", ""),
+                "assessment_length": meta.get("assessment_length", ""),
+                "assessment_types": meta.get("assessment_types", ""),
+            })
 
-    results = []
-    for doc in final_docs:
-        meta = doc.metadata
-        results.append({
-            "name": meta.get("name", ""),
-            "url": meta.get("url", ""),
-            "remote_testing": meta.get("remote_testing", ""),
-            "adaptive_irt": meta.get("adaptive_irt", ""),
-            "assessment_length": meta.get("assessment_length", ""),
-            "assessment_types": meta.get("assessment_types", ""),
-        })
-
-    return jsonify(results)
-
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"name":"kkkk","new":"yes"})
 # if __name__ == "__main__":
     
 #     app.run(host="0.0.0.0", port=8000)
