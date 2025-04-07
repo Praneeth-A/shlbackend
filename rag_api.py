@@ -8,18 +8,52 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.docstore import InMemoryDocstore
 import google.generativeai as genai
 import logging
-
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 app = Flask(__name__)
+# Load FAISS index and docstore
+with open("demoData/shl_demo_metadata.pkl", "rb") as f:
+    
+  docstore = pickle.load(f)
+  logging.info("check1")
+index = faiss.read_index("demoData/shl_demo_index.faiss")
+logging.info("check2")
 
+# LangChain FAISS setup
+vectorstore = FAISS(
+embedding_function=None,
+index=index,
+docstore=InMemoryDocstore(docstore),
+index_to_docstore_id={i: str(i) for i in range(index.ntotal)}
+,
+)
+logging.info("check3")
+embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+logging.info("check4")
+
+# Gemini setup
+api_key = os.getenv("GOOGLE_API_KEY")
+if not api_key:
+    logging.error("GOOGLE_API_KEY not found in environment variables.")
+    raise Exception("Missing API key.")
+genai.configure(api_key=api_key)
+# genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+model = genai.GenerativeModel("gemini-1.5-pro-002")
+logging.info("check5")
+# except Exception as e:
+#         logging.error(f"Error occurred: {e}", exc_info=True)
 @app.route("/recommend", methods=["POST"])
 def recommend():
     try:
         data = request.get_json()
         query = data.get("query", "")
+        logging.info("check6")
+
         query_embedding = embedding_model.embed_query(query)
+        logging.info("check7")
 
         # Hybrid FAISS approach
         docs_and_scores = vectorstore.similarity_search_with_score_by_vector(query_embedding, k=20)
+        logging.info("check8")
 
         # Filter based on scores, guarantee at least 1
         threshold = 0.4  # adjust as needed
@@ -55,9 +89,11 @@ def recommend():
     Return a list of the top assessments' names only in order.
     Return names only, one per line. No bullets or numbering as I'm parsing this response.
     """
-        
-        response = model.generate_content(prompt,
-      )
+        logging.info("check9")
+
+        response = model.generate_content(prompt      )
+        logging.info("check10")
+
         assessment_names = response.text.strip().splitlines()
 
         # Clean and lookup final results
@@ -77,28 +113,5 @@ def recommend():
             })
 
         return jsonify(results)
-    except Exception as e:
-        logging.error(f"Error occurred: {e}", exc_info=True)
-if __name__ == "__main__":
-    try:
-    # Load FAISS index and docstore
-     with open("demoData/shl_demo_metadata.pkl", "rb") as f:
-        docstore = pickle.load(f)
-     index = faiss.read_index("demoData/shl_demo_index.faiss")
-
-    # LangChain FAISS setup
-     vectorstore = FAISS(
-        embedding_function=None,
-        index=index,
-        docstore=InMemoryDocstore(docstore),
-        index_to_docstore_id={i: str(i) for i in range(index.ntotal)}
-    ,
-    )
-
-     embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-    # Gemini setup
-     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-     model = genai.GenerativeModel("gemini-1.5-pro-002")
     except Exception as e:
         logging.error(f"Error occurred: {e}", exc_info=True)
