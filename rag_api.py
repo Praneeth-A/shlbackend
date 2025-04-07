@@ -7,32 +7,13 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.docstore import InMemoryDocstore
 import google.generativeai as genai
-
-# Load FAISS index and docstore
-with open("demoData/shl_demo_metadata.pkl", "rb") as f:
-    docstore = pickle.load(f)
-index = faiss.read_index("demoData/shl_demo_index.faiss")
-
-# LangChain FAISS setup
-vectorstore = FAISS(
-    embedding_function=None,
-    index=index,
-    docstore=InMemoryDocstore(docstore),
-    index_to_docstore_id={i: str(i) for i in range(index.ntotal)}
-,
-)
-
-embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-# Gemini setup
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-pro-002")
+import logging
 
 app = Flask(__name__)
 
 @app.route("/recommend", methods=["POST"])
 def recommend():
-    
+    try:
         data = request.get_json()
         query = data.get("query", "")
         query_embedding = embedding_model.embed_query(query)
@@ -76,18 +57,7 @@ def recommend():
     """
         
         response = model.generate_content(prompt,
-        generation_config={
-            "temperature": 0.7,
-            "top_p": 1,
-            "top_k": 1,
-            "max_output_tokens": 1024
-        },
-        safety_settings=[
-            {"category": "HARM_CATEGORY_DEROGATORY", "threshold": 3},
-            {"category": "HARM_CATEGORY_VIOLENCE", "threshold": 3},
-            {"category": "HARM_CATEGORY_SEXUAL", "threshold": 3},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": 3},
-        ])
+      )
         assessment_names = response.text.strip().splitlines()
 
         # Clean and lookup final results
@@ -107,4 +77,28 @@ def recommend():
             })
 
         return jsonify(results)
-    
+    except Exception as e:
+        logging.error(f"Error occurred: {e}", exc_info=True)
+if __name__ == "__main__":
+    try:
+    # Load FAISS index and docstore
+     with open("demoData/shl_demo_metadata.pkl", "rb") as f:
+        docstore = pickle.load(f)
+     index = faiss.read_index("demoData/shl_demo_index.faiss")
+
+    # LangChain FAISS setup
+     vectorstore = FAISS(
+        embedding_function=None,
+        index=index,
+        docstore=InMemoryDocstore(docstore),
+        index_to_docstore_id={i: str(i) for i in range(index.ntotal)}
+    ,
+    )
+
+     embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+    # Gemini setup
+     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+     model = genai.GenerativeModel("gemini-1.5-pro-002")
+    except Exception as e:
+        logging.error(f"Error occurred: {e}", exc_info=True)
