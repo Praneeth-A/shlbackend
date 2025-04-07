@@ -34,7 +34,6 @@ try:
         ,
         )
         logging.info("check3")
-        # embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         # logging.info("check4")
 
         # Gemini setup
@@ -43,7 +42,6 @@ try:
             logging.error("GOOGLE_API_KEY not found in environment variables.")
             raise Exception("Missing API key.")
         genai.configure(api_key=api_key)
-        # genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
         model = genai.GenerativeModel("gemini-1.5-pro-002")
         onnx_model_path = "onnx_model/"
         onnx_model = ORTModelForFeatureExtraction.from_pretrained(onnx_model_path)
@@ -63,8 +61,6 @@ def embed_query(texts):
         outputs = onnx_model(**inputs)
     embeddings = outputs.last_hidden_state.mean(dim=1)
     return embeddings.cpu().numpy()
-# except Exception as e:
-#         logging.error(f"Error occurred: {e}", exc_info=True)
 @app.route("/recommend", methods=["POST"])
 def recommend():
     try:
