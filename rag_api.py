@@ -8,36 +8,43 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.docstore import InMemoryDocstore
 import google.generativeai as genai
 import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from flask_cors import CORS
+
 app = Flask(__name__)
-# Load FAISS index and docstore
-with open("demoData/shl_demo_metadata.pkl", "rb") as f:
-    
-  docstore = pickle.load(f)
-  logging.info("check1")
-index = faiss.read_index("demoData/shl_demo_index.faiss")
-logging.info("check2")
+CORS(app)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+try:
+        # Load FAISS index and docstore
+        with open("demoData/shl_demo_metadata.pkl", "rb") as f:
+            
+          docstore = pickle.load(f)
+        logging.info("check1")
+        index = faiss.read_index("demoData/shl_demo_index.faiss")
+        logging.info("check2")
 
-# LangChain FAISS setup
-vectorstore = FAISS(
-embedding_function=None,
-index=index,
-docstore=InMemoryDocstore(docstore),
-index_to_docstore_id={i: str(i) for i in range(index.ntotal)}
-,
-)
-logging.info("check3")
-embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-logging.info("check4")
+        # LangChain FAISS setup
+        vectorstore = FAISS(
+        embedding_function=None,
+        index=index,
+        docstore=InMemoryDocstore(docstore),
+        index_to_docstore_id={i: str(i) for i in range(index.ntotal)}
+        ,
+        )
+        logging.info("check3")
+        embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        logging.info("check4")
 
-# Gemini setup
-api_key = os.getenv("GOOGLE_API_KEY")
-if not api_key:
-    logging.error("GOOGLE_API_KEY not found in environment variables.")
-    raise Exception("Missing API key.")
-genai.configure(api_key=api_key)
-# genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-pro-002")
+        # Gemini setup
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            logging.error("GOOGLE_API_KEY not found in environment variables.")
+            raise Exception("Missing API key.")
+        genai.configure(api_key=api_key)
+        # genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+        model = genai.GenerativeModel("gemini-1.5-pro-002")
+except Exception as e:
+    logging.error("❌ Error during app startup", exc_info=True)
+    raise e
 logging.info("check5")
 # except Exception as e:
 #         logging.error(f"Error occurred: {e}", exc_info=True)
@@ -56,7 +63,7 @@ def recommend():
         logging.info("check8")
 
         # Filter based on scores, guarantee at least 1
-        threshold = 0.4  # adjust as needed
+        threshold = 0.6  # adjust as needed
         filtered_docs = [doc for doc, score in docs_and_scores if score < threshold]
         if not filtered_docs:
             filtered_docs = [docs_and_scores[0][0]]  # fallback to top-1
@@ -115,3 +122,6 @@ def recommend():
         return jsonify(results)
     except Exception as e:
         logging.error(f"Error occurred: {e}", exc_info=True)
+@app.route("/")
+def home():
+    return "Server is up"
