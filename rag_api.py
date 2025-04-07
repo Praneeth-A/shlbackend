@@ -5,8 +5,8 @@ import pickle
 # import numpy as np
 from flask import Flask, request, jsonify
 from langchain_community.vectorstores import FAISS
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.docstore import InMemoryDocstore
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.docstore import InMemoryDocstore
 import google.generativeai as genai
 
 # Load FAISS index and docstore
