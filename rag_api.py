@@ -4,12 +4,15 @@ import faiss
 import pickle
 from flask import Flask, request, jsonify
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
+# from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.docstore import InMemoryDocstore
 import google.generativeai as genai
 import logging
 from flask_cors import CORS
-
+import numpy
+import torch
+from transformers import AutoTokenizer
+from optimum.onnxruntime import ORTModelForFeatureExtraction
 app = Flask(__name__)
 CORS(app)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -31,8 +34,8 @@ try:
         ,
         )
         logging.info("check3")
-        embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-        logging.info("check4")
+        # embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        # logging.info("check4")
 
         # Gemini setup
         api_key = os.getenv("GOOGLE_API_KEY")
@@ -42,10 +45,24 @@ try:
         genai.configure(api_key=api_key)
         # genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
         model = genai.GenerativeModel("gemini-1.5-pro-002")
+        onnx_model_path = "onnx_model/"
+        onnx_model = ORTModelForFeatureExtraction.from_pretrained(onnx_model_path)
+        onnx_tokenizer = AutoTokenizer.from_pretrained(onnx_model_path)
+
 except Exception as e:
     logging.error("❌ Error during app startup", exc_info=True)
     raise e
+
 logging.info("check5")
+
+def embed_query(texts):
+    if isinstance(texts, str):
+        texts = [texts]
+    inputs = onnx_tokenizer(texts, return_tensors="pt", padding=True, truncation=True)
+    with torch.no_grad():
+        outputs = onnx_model(**inputs)
+    embeddings = outputs.last_hidden_state.mean(dim=1)
+    return embeddings.cpu().numpy()
 # except Exception as e:
 #         logging.error(f"Error occurred: {e}", exc_info=True)
 @app.route("/recommend", methods=["POST"])
@@ -55,11 +72,11 @@ def recommend():
         query = data.get("query", "")
         logging.info("check6")
 
-        query_embedding = embedding_model.embed_query(query)
+        query_embedding = embed_query(query)
         logging.info("check7")
 
         # Hybrid FAISS approach
-        docs_and_scores = vectorstore.similarity_search_with_score_by_vector(query_embedding, k=20)
+        docs_and_scores = vectorstore.similarity_search_with_score_by_vector(query_embedding[0], k=20)
         logging.info("check8")
 
         # Filter based on scores, guarantee at least 1
