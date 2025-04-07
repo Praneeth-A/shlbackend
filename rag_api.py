@@ -11,13 +11,14 @@ import google.generativeai as genai
 import logging
 
 logging.basicConfig(level=logging.INFO)
+app = Flask(__name__)
 # Load FAISS index and docstore
 try:
-    with open("data/shl_metadata.pkl", "rb") as f:
+    with open("demoData/shl_demo_metadata.pkl", "rb") as f:
         docstore = pickle.load(f)
     # with open("embeddings/index_to_docstore_id.pkl", "rb") as f:
     #     index_to_docstore_id = pickle.load(f)
-    index = faiss.read_index("data/shl_index.faiss")
+    index = faiss.read_index("demoData/shl_demo_index.faiss")
 
     # LangChain FAISS setup
     # vectorstore = FAISS(
@@ -48,7 +49,7 @@ try:
     genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
     model = genai.GenerativeModel("gemini-1.5-pro-002")
 
-    app = Flask(__name__)
+    
     
 except Exception as e:
         logging.error(f"Error occurred: {e}", exc_info=True)
