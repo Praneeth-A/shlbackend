@@ -34,7 +34,6 @@ try:
         ,
         )
         logging.info("check3")
-        # logging.info("check4")
 
         # Gemini setup
         api_key = os.getenv("GOOGLE_API_KEY")
@@ -51,7 +50,7 @@ except Exception as e:
     logging.error("❌ Error during app startup", exc_info=True)
     raise e
 
-logging.info("check5")
+logging.info("check4")
 
 def embed_query(texts):
     if isinstance(texts, str):
@@ -66,14 +65,14 @@ def recommend():
     try:
         data = request.get_json()
         query = data.get("query", "")
-        logging.info("check6")
+        logging.info("check5")
 
         query_embedding = embed_query(query)
-        logging.info("check7")
+        logging.info("check6")
 
         # Hybrid FAISS approach
         docs_and_scores = vectorstore.similarity_search_with_score_by_vector(query_embedding[0], k=20)
-        logging.info("check8")
+        logging.info("check7")
 
         # Filter based on scores, guarantee at least 1
         threshold = 0.6  # adjust as needed
