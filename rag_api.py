@@ -20,12 +20,26 @@ try:
     index = faiss.read_index("data/shl_index.faiss")
 
     # LangChain FAISS setup
+    # vectorstore = FAISS(
+    #     embedding_function=None,
+    #     index=index,
+    #     docstore=InMemoryDocstore(docstore),
+    #     index_to_docstore_id={i: str(i) for i in range(index.ntotal)}
+    # ,
+    # )
+        # Create a new FAISS index with just the first 30 vectors
+    new_index = faiss.IndexFlatL2(index.d)  # assumes L2 type
+    xb = faiss.vector_to_array(index.xb).reshape(index.ntotal, -1)[:100]
+    new_index.add(xb)
+
+    # Create a smaller docstore with only 30 entries
+    limited_docstore = {str(i): docstore[str(i)] for i in range(100)}
+
     vectorstore = FAISS(
         embedding_function=None,
-        index=index,
-        docstore=InMemoryDocstore(docstore),
-        index_to_docstore_id={i: str(i) for i in range(index.ntotal)}
-    ,
+        index=new_index,
+        docstore=InMemoryDocstore(limited_docstore),
+        index_to_docstore_id={i: str(i) for i in range(100)}
     )
 
     embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
