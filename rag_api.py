@@ -12,29 +12,33 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 # Load FAISS index and docstore
-with open("data/shl_metadata.pkl", "rb") as f:
-    docstore = pickle.load(f)
-# with open("embeddings/index_to_docstore_id.pkl", "rb") as f:
-#     index_to_docstore_id = pickle.load(f)
-index = faiss.read_index("data/shl_index.faiss")
+try:
+    with open("data/shl_metadata.pkl", "rb") as f:
+        docstore = pickle.load(f)
+    # with open("embeddings/index_to_docstore_id.pkl", "rb") as f:
+    #     index_to_docstore_id = pickle.load(f)
+    index = faiss.read_index("data/shl_index.faiss")
 
-# LangChain FAISS setup
-vectorstore = FAISS(
-    embedding_function=None,
-    index=index,
-    docstore=InMemoryDocstore(docstore),
-    index_to_docstore_id={i: str(i) for i in range(index.ntotal)}
-,
-)
+    # LangChain FAISS setup
+    vectorstore = FAISS(
+        embedding_function=None,
+        index=index,
+        docstore=InMemoryDocstore(docstore),
+        index_to_docstore_id={i: str(i) for i in range(index.ntotal)}
+    ,
+    )
 
-embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-# Gemini setup
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-model = genai.GenerativeModel("gemini-1.5-pro-002")
+    # Gemini setup
+    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+    model = genai.GenerativeModel("gemini-1.5-pro-002")
 
-app = Flask(__name__)
-
+    app = Flask(__name__)
+    
+except Exception as e:
+        logging.error(f"Error occurred: {e}", exc_info=True)
+        # return jsonify({"name":"kkkk","new":"yes"})
 @app.route("/recommend", methods=["POST"])
 def recommend():
     try:
