@@ -8,7 +8,9 @@ from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.docstore import InMemoryDocstore
 import google.generativeai as genai
+import logging
 
+logging.basicConfig(level=logging.INFO)
 # Load FAISS index and docstore
 with open("data/shl_metadata.pkl", "rb") as f:
     docstore = pickle.load(f)
@@ -28,55 +30,56 @@ vectorstore = FAISS(
 embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 # Gemini setup
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+genai.configure(api_key=os.getenv("AIzaSyAvIkijNFAGpHW62gMqcuxV3JT7AS_-2c8"))
 model = genai.GenerativeModel("gemini-1.5-pro-002")
 
 app = Flask(__name__)
 
 @app.route("/recommend", methods=["POST"])
 def recommend():
-    data = request.get_json()
-    query = data.get("query", "")
-    query_embedding = embedding_model.embed_query(query)
-
-    # Hybrid FAISS approach
-    docs_and_scores = vectorstore.similarity_search_with_score_by_vector(query_embedding, k=20)
-
-    # Filter based on scores, guarantee at least 1
-    threshold = 0.4  # adjust as needed
-    filtered_docs = [doc for doc, score in docs_and_scores if score < threshold]
-    if not filtered_docs:
-        filtered_docs = [docs_and_scores[0][0]]  # fallback to top-1
-
-    # Format retrieved documents for Gemini
-    formatted = []
-    for doc in filtered_docs:
-        meta = doc.metadata
-        formatted.append(f"""
-name: {meta.get('name', '')}
-remote_testing: {meta.get('remote_testing', '')}
-adaptive_irt: {meta.get('adaptive_irt', '')}
-assessment_types: {meta.get('assessment_types', '')}
-description: {meta.get('description','')}
-job_levels: {meta.get('job_levels', '')}
-languages: {meta.get('languages', '')}
-assessment_length: {meta.get('assessment_length', '')}
-""")
-
-    joined_docs = "\n".join(formatted)
-    prompt = f"""You are an assistant that helps recommend assessments from a list.
-Given the following assessments and the user query, return the names of
-the most relevant assessments — at most 10, at least 1 — in order of relevance.
-
-Assessments:
-{joined_docs}
-
-Query: {query}
-
-Return a list of the top assessments' names only in order.
-Return names only, one per line. No bullets or numbering as I'm parsing this response.
-"""
     try:
+        data = request.get_json()
+        query = data.get("query", "")
+        query_embedding = embedding_model.embed_query(query)
+
+        # Hybrid FAISS approach
+        docs_and_scores = vectorstore.similarity_search_with_score_by_vector(query_embedding, k=20)
+
+        # Filter based on scores, guarantee at least 1
+        threshold = 0.4  # adjust as needed
+        filtered_docs = [doc for doc, score in docs_and_scores if score < threshold]
+        if not filtered_docs:
+            filtered_docs = [docs_and_scores[0][0]]  # fallback to top-1
+
+        # Format retrieved documents for Gemini
+        formatted = []
+        for doc in filtered_docs:
+            meta = doc.metadata
+            formatted.append(f"""
+    name: {meta.get('name', '')}
+    remote_testing: {meta.get('remote_testing', '')}
+    adaptive_irt: {meta.get('adaptive_irt', '')}
+    assessment_types: {meta.get('assessment_types', '')}
+    description: {meta.get('description','')}
+    job_levels: {meta.get('job_levels', '')}
+    languages: {meta.get('languages', '')}
+    assessment_length: {meta.get('assessment_length', '')}
+    """)
+
+        joined_docs = "\n".join(formatted)
+        prompt = f"""You are an assistant that helps recommend assessments from a list.
+    Given the following assessments and the user query, return the names of
+    the most relevant assessments — at most 10, at least 1 — in order of relevance.
+
+    Assessments:
+    {joined_docs}
+
+    Query: {query}
+
+    Return a list of the top assessments' names only in order.
+    Return names only, one per line. No bullets or numbering as I'm parsing this response.
+    """
+        
         response = model.generate_content(prompt,
         generation_config={
             "temperature": 0.7,
@@ -110,7 +113,7 @@ Return names only, one per line. No bullets or numbering as I'm parsing this res
 
         return jsonify(results)
     except Exception as e:
+        logging.error(f"Error occurred: {e}", exc_info=True)
         return jsonify({"name":"kkkk","new":"yes"})
 # if __name__ == "__main__":
-    
-#     app.run(host="0.0.0.0", port=8000)
+#     app.run(host="127.0.0.1", port=8000)
