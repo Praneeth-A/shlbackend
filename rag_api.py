@@ -15,11 +15,11 @@ CORS(app)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 try:
         # Load FAISS index and docstore
-        with open("demoData/shl_demo_metadata.pkl", "rb") as f:
+        with open("demoData2/shl_demo_metadata.pkl", "rb") as f:
             
           docstore = pickle.load(f)
         logging.info("check1")
-        index = faiss.read_index("demoData/shl_demo_index.faiss")
+        index = faiss.read_index("demoData2/shl_demo_index.faiss")
         logging.info("check2")
 
         # LangChain FAISS setup
