@@ -11,8 +11,8 @@ import logging
 from flask_cors import CORS
 import numpy as np
 # import torch
-# from transformers import AutoTokenizer
-from optimum.onnxruntime import  ORTTokenizer
+from transformers import AutoTokenizer
+# from optimum.onnxruntime import  ORTTokenizer
 import onnxruntime as ort
 app = Flask(__name__)
 CORS(app)
@@ -49,9 +49,9 @@ try:
         sess = ort.InferenceSession("onnx_model/model.onnx", providers=["CPUExecutionProvider"])
     
         logging.info("check4")
-        onnx_tokenizer = ORTTokenizer.from_pretrained(onnx_model_path)
+        # onnx_tokenizer = ORTTokenizer.from_pretrained(onnx_model_path)
         
-        # onnx_tokenizer = AutoTokenizer.from_pretrained(onnx_model_path)
+        onnx_tokenizer = AutoTokenizer.from_pretrained(onnx_model_path)
         logging.info("check5")
         
 except Exception as e:
