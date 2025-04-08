@@ -9,14 +9,16 @@ from langchain_community.docstore import InMemoryDocstore
 import google.generativeai as genai
 import logging
 from flask_cors import CORS
-import numpy
-import torch
-from transformers import AutoTokenizer
-from optimum.onnxruntime import ORTModelForFeatureExtraction
+import numpy as np
+# import torch
+# from transformers import AutoTokenizer
+from optimum.onnxruntime import  ORTTokenizer
+import onnxruntime as ort
 app = Flask(__name__)
 CORS(app)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 try:
+       
         # Load FAISS index and docstore
         with open("demoData2/shl_demo_metadata.pkl", "rb") as f:
             
@@ -43,10 +45,13 @@ try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("gemini-1.5-pro-002")
         onnx_model_path = "onnx_model/"
-        onnx_model = ORTModelForFeatureExtraction.from_pretrained(onnx_model_path)
+        # onnx_model = ORTModelForFeatureExtraction.from_pretrained(onnx_model_path)
+        sess = ort.InferenceSession("onnx_model/model.onnx", providers=["CPUExecutionProvider"])
+    
         logging.info("check4")
+        onnx_tokenizer = ORTTokenizer.from_pretrained(onnx_model_path)
         
-        onnx_tokenizer = AutoTokenizer.from_pretrained(onnx_model_path)
+        # onnx_tokenizer = AutoTokenizer.from_pretrained(onnx_model_path)
         logging.info("check5")
         
 except Exception as e:
@@ -54,21 +59,40 @@ except Exception as e:
     raise e
 
 logging.info("check6")
-
 def embed_query(texts):
     if isinstance(texts, str):
         texts = [texts]
-    inputs = onnx_tokenizer(texts, return_tensors="pt", padding=True, truncation=True)
-    logging.info("check7")
+
+    # Tokenize
+    inputs = onnx_tokenizer(texts, return_tensors="np", padding=True, truncation=True)
+
+    # Prepare inputs for ONNX
+    ort_inputs = {k: v.astype(np.int64) for k, v in inputs.items() if k in ['input_ids', 'attention_mask']}
+
+    # Run inference
+    outputs = sess.run(None, ort_inputs)
     
-    with torch.no_grad():
-        outputs = onnx_model(**inputs)
-    logging.info("check8")
+    # Get the output from last_hidden_state (usually the first output)
+    last_hidden_state = outputs[0]  # shape: (batch_size, seq_len, hidden_size)
+
+    # Mean pooling over tokens
+    embeddings = np.mean(last_hidden_state, axis=1)  # shape: (batch_size, hidden_size)
+
+    return embeddings
+# def embed_query(texts):
+#     if isinstance(texts, str):
+#         texts = [texts]
+#     inputs = onnx_tokenizer(texts,  padding=True, truncation=True)
+#     logging.info("check7")
+    
+#     with torch.no_grad():
+#         outputs = onnx_model(**inputs)
+#     logging.info("check8")
         
-    embeddings = outputs.last_hidden_state.mean(dim=1)
-    logging.info("check9")
+#     embeddings = outputs.last_hidden_state.mean(dim=1)
+#     logging.info("check9")
     
-    return embeddings.cpu().numpy()
+#     return embeddings.cpu().numpy()
 logging.info("check10")
   
 @app.route("/recommend", methods=["POST"])
