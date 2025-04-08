@@ -64,10 +64,10 @@ def embed_query(texts):
         texts = [texts]
 
     # Tokenize
-    inputs = onnx_tokenizer(texts, return_tensors="np", padding=True, truncation=True)
+    inputs = onnx_tokenizer(texts, return_tensors="np", padding=True,  return_token_type_ids=True ,truncation=True)
 
     # Prepare inputs for ONNX
-    ort_inputs = {k: v.astype(np.int64) for k, v in inputs.items() if k in ['input_ids', 'attention_mask']}
+    ort_inputs = {k: v.astype(np.int64) for k, v in inputs.items() if k in ['input_ids', 'attention_mask', 'token_type_ids']}
 
     # Run inference
     outputs = sess.run(None, ort_inputs)
