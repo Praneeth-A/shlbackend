@@ -41,7 +41,7 @@ try:
             logging.error("GOOGLE_API_KEY not found in environment variables.")
             raise Exception("Missing API key.")
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-pro-002")
+        model = genai.GenerativeModel("gemini-1.5-flash")
         onnx_model_path = "onnx_model/"
         sess = ort.InferenceSession("onnx_model/model.onnx", providers=["CPUExecutionProvider"])
     
