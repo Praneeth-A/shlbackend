@@ -1,6 +1,6 @@
 huggingface_hub>=0.23.0
 sentence-transformers>=2.2.2
-transformers==4.35.0
+transformers>=4.35.0
 torch>=1.13.1
 pydantic>=2.0.0
 flask-cors
