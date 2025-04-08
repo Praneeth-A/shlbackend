@@ -44,35 +44,46 @@ try:
         model = genai.GenerativeModel("gemini-1.5-pro-002")
         onnx_model_path = "onnx_model/"
         onnx_model = ORTModelForFeatureExtraction.from_pretrained(onnx_model_path)
+        logging.info("check4")
+        
         onnx_tokenizer = AutoTokenizer.from_pretrained(onnx_model_path)
-
+        logging.info("check5")
+        
 except Exception as e:
     logging.error("❌ Error during app startup", exc_info=True)
     raise e
 
-logging.info("check4")
+logging.info("check6")
 
 def embed_query(texts):
     if isinstance(texts, str):
         texts = [texts]
     inputs = onnx_tokenizer(texts, return_tensors="pt", padding=True, truncation=True)
+    logging.info("check7")
+    
     with torch.no_grad():
         outputs = onnx_model(**inputs)
+    logging.info("check8")
+        
     embeddings = outputs.last_hidden_state.mean(dim=1)
+    logging.info("check9")
+    
     return embeddings.cpu().numpy()
+logging.info("check10")
+  
 @app.route("/recommend", methods=["POST"])
 def recommend():
     try:
         data = request.get_json()
         query = data.get("query", "")
-        logging.info("check5")
+        logging.info("check11")
 
         query_embedding = embed_query(query)
-        logging.info("check6")
+        logging.info("check12")
 
         # Hybrid FAISS approach
         docs_and_scores = vectorstore.similarity_search_with_score_by_vector(query_embedding[0], k=20)
-        logging.info("check7")
+        logging.info("check13")
 
         # Filter based on scores, guarantee at least 1
         threshold = 0.6  # adjust as needed
@@ -108,10 +119,10 @@ def recommend():
     Return a list of the top assessments' names only in order.
     Return names only, one per line. No bullets or numbering as I'm parsing this response.
     """
-        logging.info("check9")
+        logging.info("check14")
 
         response = model.generate_content(prompt      )
-        logging.info("check10")
+        logging.info("check15")
 
         assessment_names = response.text.strip().splitlines()
 
